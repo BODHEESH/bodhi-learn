@@ -1,0 +1,325 @@
+# \d\DREAM\bodhi-learn\backend\services\identity-management\tenant-service\src\docs\swagger.yaml
+
+openapi: 3.0.0
+info:
+  title: Tenant Service API
+  description: API documentation for the Tenant Service
+  version: 1.0.0
+  contact:
+    name: Development Team
+    email: dev@example.com
+
+servers:
+  - url: /api/v1
+    description: Main API server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, SUSPENDED, DELETED]
+        type:
+          type: string
+          enum: [TRIAL, BASIC, PREMIUM, ENTERPRISE]
+        features:
+          type: array
+          items:
+            type: string
+        settings:
+          type: object
+        metadata:
+          type: object
+        userLimit:
+          type: integer
+        storageLimit:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TenantSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        settings:
+          type: object
+        theme:
+          type: object
+        preferences:
+          type: object
+        features:
+          type: object
+        integrations:
+          type: object
+        notifications:
+          type: object
+        security:
+          type: object
+        metadata:
+          type: object
+
+    TenantBilling:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, SUSPENDED, CANCELLED]
+        plan:
+          type: string
+        billingCycle:
+          type: string
+          enum: [MONTHLY, YEARLY]
+        amount:
+          type: number
+        currency:
+          type: string
+        paymentMethod:
+          type: string
+        nextBillingDate:
+          type: string
+          format: date-time
+
+paths:
+  /tenants:
+    get:
+      summary: List all tenants
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tenants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tenant'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+                      current:
+                        type: integer
+                      perPage:
+                        type: integer
+
+    post:
+      summary: Create a new tenant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tenant'
+      responses:
+        '201':
+          description: Tenant created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  /tenants/{tenantId}:
+    get:
+      summary: Get tenant by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tenant details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+    put:
+      summary: Update tenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tenant'
+      responses:
+        '200':
+          description: Tenant updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+    delete:
+      summary: Delete tenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Tenant deleted successfully
+
+  /tenants/{tenantId}/settings:
+    get:
+      summary: Get tenant settings
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tenant settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantSettings'
+
+    put:
+      summary: Update tenant settings
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantSettings'
+      responses:
+        '200':
+          description: Settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantSettings'
+
+  /tenants/{tenantId}/billing:
+    get:
+      summary: Get tenant billing
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tenant billing information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantBilling'
+
+    put:
+      summary: Update tenant billing
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantBilling'
+      responses:
+        '200':
+          description: Billing updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantBilling'
