@@ -1,64 +1,84 @@
 // \d\DREAM\bodhi-learn\backend\services\identity-management\auth-service\src\routes\v1\auth.routes.js
 
 const express = require('express');
-const { AuthController } = require('../../controllers/auth.controller');
-const { RateLimitMiddleware } = require('../../middleware/rate-limit.middleware');
-const { authenticate } = require('../../middleware/auth.middleware');
+const { AuthController } = require('../controllers/auth.controller');
+const { 
+  loginLimiter, 
+  passwordResetLimiter, 
+  mfaVerifyLimiter 
+} = require('../middleware/rate-limiter');
+const { 
+  authenticate, 
+  requireRoles, 
+  requireMFA 
+} = require('../middleware/auth.middleware');
+const { validateSchema } = require('../middleware/validation.middleware');
+const {
+  loginSchema,
+  refreshTokenSchema,
+  passwordResetSchema,
+  passwordUpdateSchema,
+  mfaSetupSchema,
+  mfaVerifySchema
+} = require('../validations/auth.validation');
 
 const router = express.Router();
-const authController = new AuthController();
-const rateLimitMiddleware = new RateLimitMiddleware();
 
 // Public routes
-router.post(
-  '/login',
-  rateLimitMiddleware.loginLimiter(),
-  (req, res) => authController.login(req, res)
+router.post('/login', 
+  loginLimiter,
+  validateSchema(loginSchema),
+  AuthController.login
 );
 
-router.post(
-  '/refresh',
-  (req, res) => authController.refresh(req, res)
+router.post('/refresh',
+  validateSchema(refreshTokenSchema),
+  AuthController.refreshToken
 );
 
-router.post(
-  '/password/reset',
-  rateLimitMiddleware.passwordResetLimiter(),
-  (req, res) => authController.resetPassword(req, res)
+router.post('/password/reset',
+  passwordResetLimiter,
+  validateSchema(passwordResetSchema),
+  AuthController.resetPassword
 );
 
 // Protected routes
-router.post(
-  '/logout',
+router.post('/logout',
   authenticate,
-  (req, res) => authController.logout(req, res)
+  AuthController.logout
 );
 
-router.post(
-  '/password/update',
+router.post('/password/update',
   authenticate,
-  (req, res) => authController.updatePassword(req, res)
+  validateSchema(passwordUpdateSchema),
+  AuthController.updatePassword
 );
 
 // MFA routes
-router.post(
-  '/mfa/setup',
+router.post('/mfa/setup',
   authenticate,
-  (req, res) => authController.setupMFA(req, res)
+  validateSchema(mfaSetupSchema),
+  AuthController.setupMFA
 );
 
-router.post(
-  '/mfa/verify',
+router.post('/mfa/verify',
   authenticate,
-  rateLimitMiddleware.mfaVerifyLimiter(),
-  (req, res) => authController.verifyMFA(req, res)
+  mfaVerifyLimiter,
+  validateSchema(mfaVerifySchema),
+  AuthController.verifyMFA
 );
 
-router.post(
-  '/mfa/disable',
+router.post('/mfa/disable',
   authenticate,
-  rateLimitMiddleware.mfaVerifyLimiter(),
-  (req, res) => authController.disableMFA(req, res)
+  requireMFA,
+  AuthController.disableMFA
+);
+
+// Admin routes
+router.post('/users/:userId/reset-mfa',
+  authenticate,
+  requireRoles(['admin']),
+  AuthController.resetUserMFA
 );
 
 module.exports = router;

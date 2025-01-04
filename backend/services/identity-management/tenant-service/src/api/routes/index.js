@@ -3,9 +3,9 @@
 const express = require('express');
 const router = express.Router();
 const tenantRoutes = require('./tenant.routes');
-const { errorHandler } = require('../../middleware/error-handler');
-const { notFoundHandler } = require('../../middleware/not-found');
-const { metrics } = require('../../utils/metrics');
+const { errorHandler } = require('../middlewares/error-handler');
+const { notFoundHandler } = require('../middlewares/not-found');
+const { metrics } = require('../utils/metrics');
 
 // Health check endpoint
 router.get('/health', (req, res) => {

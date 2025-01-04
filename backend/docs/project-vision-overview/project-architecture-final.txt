@@ -1,0 +1,328 @@
+bodhi-learn/
+├── api-gateway/                    # API Gateway Service
+│   ├── src/
+│   │   ├── config/
+│   │   ├── middleware/
+│   │   └── routes/
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── package.json
+│
+├── services/
+│   ├── 1. identity-management-service/    # [COMPLETED]
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── auth/
+│   │   │   │   ├── user/
+│   │   │   │   ├── tenant/
+│   │   │   │   ├── organization/
+│   │   │   │   ├── roles/
+│   │   │   │   └── permissions/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 2. learning-management-service/    # [NEXT]
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── course/
+│   │   │   │   ├── curriculum/
+│   │   │   │   ├── content/
+│   │   │   │   ├── assessment/
+│   │   │   │   ├── assignment/
+│   │   │   │   ├── quiz/
+│   │   │   │   ├── media/
+│   │   │   │   ├── progress-tracking/
+│   │   │   │   └── learning-path/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 3. academic-management-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── admission/
+│   │   │   │   ├── enrollment/
+│   │   │   │   ├── attendance/
+│   │   │   │   ├── examination/
+│   │   │   │   ├── grading/
+│   │   │   │   ├── performance/
+│   │   │   │   ├── certification/
+│   │   │   │   ├── academic-calendar/
+│   │   │   │   └── program-management/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 4. student-life-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── student-profile/
+│   │   │   │   ├── activities/
+│   │   │   │   ├── clubs/
+│   │   │   │   ├── events/
+│   │   │   │   ├── counseling/
+│   │   │   │   ├── career-services/
+│   │   │   │   └── housing/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 5. communication-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── notification/
+│   │   │   │   ├── messaging/
+│   │   │   │   ├── email/
+│   │   │   │   ├── chat/
+│   │   │   │   ├── announcement/
+│   │   │   │   ├── discussion-forum/
+│   │   │   │   └── feedback/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 6. resource-management-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── library/
+│   │   │   │   ├── inventory/
+│   │   │   │   ├── facilities/
+│   │   │   │   ├── equipment/
+│   │   │   │   ├── room-booking/
+│   │   │   │   └── maintenance/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 7. financial-management-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── billing/
+│   │   │   │   ├── payments/
+│   │   │   │   ├── scholarships/
+│   │   │   │   ├── financial-aid/
+│   │   │   │   ├── accounting/
+│   │   │   │   ├── payroll/
+│   │   │   │   └── expense-management/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 8. compliance-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── policy-management/
+│   │   │   │   ├── audit-logs/
+│   │   │   │   ├── data-protection/
+│   │   │   │   ├── regulatory-compliance/
+│   │   │   │   └── reporting/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 9. infrastructure-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── system-monitoring/
+│   │   │   │   ├── backup-management/
+│   │   │   │   ├── security/
+│   │   │   │   ├── integration/
+│   │   │   │   └── api-management/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 10. support-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── helpdesk/
+│   │   │   │   ├── ticket-management/
+│   │   │   │   ├── faq/
+│   │   │   │   ├── knowledge-base/
+│   │   │   │   └── support-chat/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 11. engagement-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── gamification/
+│   │   │   │   ├── social-learning/
+│   │   │   │   ├── collaboration/
+│   │   │   │   ├── mentorship/
+│   │   │   │   └── community/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 12. marketing-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── campaigns/
+│   │   │   │   ├── analytics/
+│   │   │   │   ├── lead-management/
+│   │   │   │   ├── content-marketing/
+│   │   │   │   └── social-media/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── 13. institute-operations-service/
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   ├── modules/
+│   │   │   │   ├── staff-management/
+│   │   │   │   ├── department-management/
+│   │   │   │   ├── asset-management/
+│   │   │   │   ├── scheduling/
+│   │   │   │   └── reporting/
+│   │   │   └── shared/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   └── 14. monetization-service/
+│       ├── src/
+│       │   ├── config/
+│       │   ├── modules/
+│       │   │   ├── subscription/
+│       │   │   ├── pricing/
+│       │   │   ├── billing/
+│       │   │   ├── revenue-analytics/
+│       │   │   └── payment-gateway/
+│       │   └── shared/
+│       ├── tests/
+│       ├── Dockerfile
+│       └── package.json
+│
+├── deployment/
+│   ├── kubernetes/
+│   │   ├── api-gateway/
+│   │   ├── identity-management-service/
+│   │   └── learning-management-service/
+│   │
+│   ├── monitoring/
+│   │   ├── prometheus/
+│   │   └── grafana/
+│   │
+│   └── docker-compose.yml         # Development environment setup
+│
+└── docs/
+    ├── architecture/
+    │   ├── system-design.md
+    │   └── service-communication.md
+    ├── api/
+    │   └── swagger/
+    └── deployment/
+        └── setup-guide.md
+
+Standard Service Structure (for each service):
+service-name/
+├── src/
+│   ├── config/
+│   │   ├── database.config.js
+│   │   ├── queue.config.js
+│   │   └── cache.config.js
+│   │
+│   ├── modules/
+│   │   └── module-name/
+│   │       ├── controllers/
+│   │       ├── models/
+│   │       ├── services/
+│   │       ├── routes/
+│   │       ├── validations/
+│   │       └── index.js
+│   │
+│   └── shared/
+│       ├── middlewares/
+│       ├── utils/
+│       └── events/
+│
+├── tests/
+│   ├── unit/
+│   └── integration/
+│
+├── .env.example
+├── Dockerfile
+├── docker-compose.yml
+└── package.json
+
+Key Points:
+1. Each service is completely independent with its own:
+   - Dependencies (package.json)
+   - Configuration
+   - Docker setup
+   - Tests
+
+2. Shared code is maintained within each service
+   - No global shared code
+   - Each service can evolve independently
+
+3. Deployment configuration is centralized
+   - Kubernetes manifests
+   - Monitoring setup
+   - Development environment
+
+4. Documentation is project-wide
+   - Architecture decisions
+   - API documentation
+   - Deployment guides
+
+Implementation Order:
+1. ✓ Identity Management Service [COMPLETED]
+2. → Learning Management Service [NEXT]
+3. Academic Management Service
+4. Student Life Service
+5. Communication Service
+6. Resource Management Service
+7. Financial Management Service
+8. Compliance Service
+9. Infrastructure Service
+10. Support Service
+11. Engagement Service
+12. Marketing Service
+13. Institute Operations Service
+14. Monetization Service
+
+Each service follows the standard structure:
+service-name/
+├── src/
+│   ├── config/
+│   ├── modules/
+│   │   └── module-name/
+│   │       ├── controllers/
+│   │       ├── models/
+│   │       ├── services/
+│   │       ├── routes/
+│   │       ├── validations/
+│   │       └── index.js
+│   └── shared/
+├── tests/
+├── Dockerfile
+└── package.json

@@ -1,14 +1,6 @@
-// \d\DREAM\bodhi-learn\backend\services\identity-management\auth-service\src\controllers\auth.controller.js
-
 const { AuthService } = require('../services/auth.service');
-const { validateSchema } = require('../utils/validation');
-const {
-  loginSchema,
-  passwordResetSchema,
-  passwordUpdateSchema,
-  mfaVerifySchema,
-  refreshTokenSchema
-} = require('../utils/validation-schemas/auth.schema');
+const { AuthError, ValidationError } = require('../utils/errors');
+const logger = require('../utils/logger');
 
 class AuthController {
   constructor() {
@@ -17,83 +9,165 @@ class AuthController {
 
   async login(req, res) {
     try {
-      const validatedData = await validateSchema(loginSchema, req.body);
-      const result = await this.authService.login(validatedData);
-      res.json(result);
+      const { email, password, institutionId } = req.body;
+      const result = await this.authService.login({ email, password, institutionId });
+      
+      logger.info('User logged in successfully', { userId: result.user.id });
+      res.json({
+        status: 'success',
+        data: result
+      });
     } catch (error) {
-      res.status(error.status || 500).json({ error: error.message });
+      logger.error('Login failed:', error);
+      this.handleError(res, error);
     }
   }
 
-  async refresh(req, res) {
+  async refreshToken(req, res) {
     try {
-      const validatedData = await validateSchema(refreshTokenSchema, req.body);
-      const result = await this.authService.refreshToken(validatedData.refreshToken);
-      res.json(result);
+      const { refreshToken } = req.body;
+      const tokens = await this.authService.refreshToken(refreshToken);
+      
+      res.json({
+        status: 'success',
+        data: tokens
+      });
     } catch (error) {
-      res.status(error.status || 500).json({ error: error.message });
+      logger.error('Token refresh failed:', error);
+      this.handleError(res, error);
     }
   }
 
   async logout(req, res) {
     try {
-      await this.authService.logout(req.user.id, req.token);
+      await this.authService.logout(req.token);
+      logger.info('User logged out successfully', { userId: req.user.id });
+      
       res.status(204).send();
     } catch (error) {
-      res.status(error.status || 500).json({ error: error.message });
+      logger.error('Logout failed:', error);
+      this.handleError(res, error);
     }
   }
 
   async resetPassword(req, res) {
     try {
-      const validatedData = await validateSchema(passwordResetSchema, req.body);
-      await this.authService.requestPasswordReset(validatedData.email);
-      res.json({ message: 'Password reset link sent successfully' });
+      const { email, institutionId } = req.body;
+      await this.authService.requestPasswordReset(email, institutionId);
+      
+      logger.info('Password reset requested', { email });
+      res.json({
+        status: 'success',
+        message: 'Password reset instructions sent to email'
+      });
     } catch (error) {
-      res.status(error.status || 500).json({ error: error.message });
+      logger.error('Password reset request failed:', error);
+      this.handleError(res, error);
     }
   }
 
   async updatePassword(req, res) {
     try {
-      const validatedData = await validateSchema(passwordUpdateSchema, req.body);
-      await this.authService.updatePassword(
-        req.user.id,
-        validatedData.currentPassword,
-        validatedData.newPassword
-      );
-      res.json({ message: 'Password updated successfully' });
+      const { currentPassword, newPassword } = req.body;
+      await this.authService.updatePassword(req.user.id, currentPassword, newPassword);
+      
+      logger.info('Password updated successfully', { userId: req.user.id });
+      res.json({
+        status: 'success',
+        message: 'Password updated successfully'
+      });
     } catch (error) {
-      res.status(error.status || 500).json({ error: error.message });
+      logger.error('Password update failed:', error);
+      this.handleError(res, error);
     }
   }
 
   async setupMFA(req, res) {
     try {
-      const result = await this.authService.setupMFA(req.user.id);
-      res.json(result);
+      const { type, phoneNumber } = req.body;
+      const mfaSetup = await this.authService.setupMFA(req.user.id, type, phoneNumber);
+      
+      logger.info('MFA setup initiated', { userId: req.user.id, type });
+      res.json({
+        status: 'success',
+        data: mfaSetup
+      });
     } catch (error) {
-      res.status(error.status || 500).json({ error: error.message });
+      logger.error('MFA setup failed:', error);
+      this.handleError(res, error);
     }
   }
 
   async verifyMFA(req, res) {
     try {
-      const validatedData = await validateSchema(mfaVerifySchema, req.body);
-      const result = await this.authService.verifyMFA(req.user.id, validatedData.code);
-      res.json(result);
+      const { code, type } = req.body;
+      await this.authService.verifyMFA(req.user.id, type, code);
+      
+      logger.info('MFA verified successfully', { userId: req.user.id });
+      res.json({
+        status: 'success',
+        message: 'MFA verified successfully'
+      });
     } catch (error) {
-      res.status(error.status || 500).json({ error: error.message });
+      logger.error('MFA verification failed:', error);
+      this.handleError(res, error);
     }
   }
 
   async disableMFA(req, res) {
     try {
-      const validatedData = await validateSchema(mfaVerifySchema, req.body);
-      await this.authService.disableMFA(req.user.id, validatedData.code);
-      res.status(204).send();
+      await this.authService.disableMFA(req.user.id);
+      
+      logger.info('MFA disabled successfully', { userId: req.user.id });
+      res.json({
+        status: 'success',
+        message: 'MFA disabled successfully'
+      });
     } catch (error) {
-      res.status(error.status || 500).json({ error: error.message });
+      logger.error('MFA disable failed:', error);
+      this.handleError(res, error);
+    }
+  }
+
+  async resetUserMFA(req, res) {
+    try {
+      const { userId } = req.params;
+      await this.authService.resetUserMFA(userId, req.user.id);
+      
+      logger.info('User MFA reset successfully', { 
+        adminId: req.user.id,
+        targetUserId: userId 
+      });
+      res.json({
+        status: 'success',
+        message: 'User MFA reset successfully'
+      });
+    } catch (error) {
+      logger.error('User MFA reset failed:', error);
+      this.handleError(res, error);
+    }
+  }
+
+  handleError(res, error) {
+    if (error instanceof AuthError) {
+      res.status(401).json({
+        status: 'error',
+        code: 'UNAUTHORIZED',
+        message: error.message
+      });
+    } else if (error instanceof ValidationError) {
+      res.status(400).json({
+        status: 'error',
+        code: 'VALIDATION_ERROR',
+        message: error.message,
+        details: error.details
+      });
+    } else {
+      res.status(500).json({
+        status: 'error',
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected error occurred'
+      });
     }
   }
 }

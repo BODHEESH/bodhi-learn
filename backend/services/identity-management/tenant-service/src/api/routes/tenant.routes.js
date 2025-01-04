@@ -5,15 +5,18 @@ const router = express.Router();
 const tenantController = require('../controllers/tenant.controller');
 const tenantSettingsController = require('../controllers/tenant-settings.controller');
 const tenantBillingController = require('../controllers/tenant-billing.controller');
-const { authenticate, authorize } = require('../../middleware/auth');
-const { validateTenantAccess } = require('../../middleware/tenant-access');
-const { rateLimiter } = require('../../middleware/rate-limiter');
+const { authenticate, authorize } = require('../middlewares/auth');
+const { validateTenantAccess } = require('../middlewares/tenant-access');
+const { rateLimiter } = require('../middlewares/rate-limiter');
+const { validate } = require('../middlewares/validation');
+const { tenantValidation } = require('../validations/tenant.validation');
 
-// Tenant routes
+// Tenant Management
 router.post(
   '/',
   authenticate,
   authorize(['admin']),
+  validate(tenantValidation.createTenant),
   rateLimiter,
   tenantController.createTenant
 );
@@ -22,6 +25,7 @@ router.get(
   '/',
   authenticate,
   authorize(['admin']),
+  validate(tenantValidation.listTenants),
   rateLimiter,
   tenantController.listTenants
 );
@@ -30,6 +34,7 @@ router.get(
   '/:id',
   authenticate,
   validateTenantAccess,
+  validate(tenantValidation.getTenant),
   rateLimiter,
   tenantController.getTenant
 );
@@ -39,6 +44,7 @@ router.put(
   authenticate,
   validateTenantAccess,
   authorize(['admin', 'tenant_admin']),
+  validate(tenantValidation.updateTenant),
   rateLimiter,
   tenantController.updateTenant
 );
@@ -47,67 +53,44 @@ router.delete(
   '/:id',
   authenticate,
   authorize(['admin']),
+  validate(tenantValidation.deleteTenant),
   rateLimiter,
   tenantController.deleteTenant
 );
 
+// Tenant Settings
 router.get(
-  '/:id/metrics',
+  '/:id/settings',
   authenticate,
   validateTenantAccess,
   authorize(['admin', 'tenant_admin']),
-  rateLimiter,
-  tenantController.getTenantMetrics
-);
-
-// Tenant Settings routes
-router.get(
-  '/:tenantId/settings',
-  authenticate,
-  validateTenantAccess,
   rateLimiter,
   tenantSettingsController.getSettings
 );
 
 router.put(
-  '/:tenantId/settings',
+  '/:id/settings',
   authenticate,
   validateTenantAccess,
   authorize(['admin', 'tenant_admin']),
+  validate(tenantValidation.updateSettings),
   rateLimiter,
   tenantSettingsController.updateSettings
 );
 
 router.patch(
-  '/:tenantId/settings/:key',
+  '/:id/settings/:key',
   authenticate,
   validateTenantAccess,
   authorize(['admin', 'tenant_admin']),
+  validate(tenantValidation.updateSetting),
   rateLimiter,
   tenantSettingsController.updateSetting
 );
 
-router.put(
-  '/:tenantId/settings/theme',
-  authenticate,
-  validateTenantAccess,
-  authorize(['admin', 'tenant_admin']),
-  rateLimiter,
-  tenantSettingsController.updateTheme
-);
-
-router.put(
-  '/:tenantId/settings/security',
-  authenticate,
-  validateTenantAccess,
-  authorize(['admin', 'tenant_admin']),
-  rateLimiter,
-  tenantSettingsController.updateSecurity
-);
-
-// Tenant Billing routes
+// Tenant Billing
 router.get(
-  '/:tenantId/billing',
+  '/:id/billing',
   authenticate,
   validateTenantAccess,
   authorize(['admin', 'tenant_admin']),
@@ -116,45 +99,41 @@ router.get(
 );
 
 router.put(
-  '/:tenantId/billing',
+  '/:id/billing',
   authenticate,
   validateTenantAccess,
-  authorize(['admin']),
+  authorize(['admin', 'tenant_admin']),
+  validate(tenantValidation.updateBilling),
   rateLimiter,
   tenantBillingController.updateBilling
 );
 
-router.patch(
-  '/:tenantId/billing/status',
-  authenticate,
-  authorize(['admin']),
-  rateLimiter,
-  tenantBillingController.updateBillingStatus
-);
-
 router.post(
-  '/:tenantId/billing/payments',
+  '/:id/billing/payments',
   authenticate,
   validateTenantAccess,
   authorize(['admin', 'tenant_admin']),
+  validate(tenantValidation.recordPayment),
   rateLimiter,
   tenantBillingController.recordPayment
 );
 
 router.get(
-  '/:tenantId/billing/history',
+  '/:id/billing/history',
   authenticate,
   validateTenantAccess,
   authorize(['admin', 'tenant_admin']),
+  validate(tenantValidation.getBillingHistory),
   rateLimiter,
   tenantBillingController.getBillingHistory
 );
 
 router.get(
-  '/:tenantId/billing/metrics',
+  '/:id/billing/metrics',
   authenticate,
   validateTenantAccess,
   authorize(['admin', 'tenant_admin']),
+  validate(tenantValidation.getBillingMetrics),
   rateLimiter,
   tenantBillingController.getBillingMetrics
 );

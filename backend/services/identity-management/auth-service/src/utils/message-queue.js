@@ -1,8 +1,7 @@
-// \d\DREAM\bodhi-learn\backend\services\identity-management\auth-service\src\utils\message-queue.js
-
 const amqp = require('amqplib');
 const config = require('../config/app.config');
 const logger = require('./logger');
+const { MessageQueueError } = require('./errors');
 
 class MessageQueue {
   constructor() {
@@ -10,6 +9,9 @@ class MessageQueue {
     this.channel = null;
     this.connected = false;
     this.reconnectTimeout = null;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 10;
+    this.consumers = new Map();
   }
 
   async connect() {
@@ -19,19 +21,38 @@ class MessageQueue {
       const { url, username, password, vhost } = config.rabbitmq;
       const connectionUrl = `amqp://${username}:${password}@${url.split('://')[1]}${vhost}`;
       
-      this.connection = await amqp.connect(connectionUrl);
+      this.connection = await amqp.connect(connectionUrl, {
+        heartbeat: 60,
+        timeout: 5000
+      });
+      
       this.channel = await this.connection.createChannel();
       this.connected = true;
+      this.reconnectAttempts = 0;
+
+      // Configure channel
+      await this.channel.prefetch(1);
 
       // Setup exchange
       await this.channel.assertExchange(config.rabbitmq.exchange, 'topic', {
-        durable: true
+        durable: true,
+        autoDelete: false
       });
 
-      // Setup queue
-      await this.channel.assertQueue(config.rabbitmq.queue, {
-        durable: true
-      });
+      // Setup queues
+      const queues = [
+        { name: 'auth_events', pattern: 'auth.#' },
+        { name: 'user_events', pattern: 'user.#' },
+        { name: 'notification_events', pattern: 'notification.#' }
+      ];
+
+      for (const queue of queues) {
+        await this.channel.assertQueue(queue.name, {
+          durable: true,
+          autoDelete: false
+        });
+        await this.channel.bindQueue(queue.name, config.rabbitmq.exchange, queue.pattern);
+      }
 
       logger.info('Connected to RabbitMQ');
 
@@ -46,9 +67,18 @@ class MessageQueue {
         this.handleDisconnect();
       });
 
+      this.channel.on('error', (error) => {
+        logger.error('RabbitMQ channel error:', error);
+      });
+
+      this.channel.on('close', () => {
+        logger.warn('RabbitMQ channel closed');
+      });
+
     } catch (error) {
       logger.error('Failed to connect to RabbitMQ:', error);
       this.handleDisconnect();
+      throw new MessageQueueError('Failed to connect to message queue');
     }
   }
 
@@ -57,94 +87,169 @@ class MessageQueue {
     this.channel = null;
     this.connection = null;
 
-    // Clear any existing reconnection timeout
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      logger.error('Max reconnection attempts reached');
+      return;
     }
 
-    // Attempt to reconnect after 5 seconds
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+
+    logger.info('Scheduling reconnection attempt', {
+      attempt: this.reconnectAttempts,
+      delay
+    });
+
+    clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = setTimeout(() => {
-      logger.info('Attempting to reconnect to RabbitMQ...');
-      this.connect();
-    }, 5000);
+      this.connect().catch(error => {
+        logger.error('Reconnection attempt failed:', error);
+      });
+    }, delay);
   }
 
-  async publish(routingKey, message, options = {}) {
+  async publish(routingKey, data, options = {}) {
     if (!this.connected) {
-      await this.connect();
+      throw new MessageQueueError('Message queue is not connected');
     }
 
     try {
+      const message = {
+        data,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          correlationId: options.correlationId || crypto.randomUUID()
+        }
+      };
+
       const success = this.channel.publish(
         config.rabbitmq.exchange,
         routingKey,
         Buffer.from(JSON.stringify(message)),
         {
           persistent: true,
-          ...options
+          ...options,
+          headers: {
+            'x-retry-count': 0,
+            ...options.headers
+          }
         }
       );
 
       if (!success) {
-        throw new Error('Message was not published successfully');
+        throw new MessageQueueError('Failed to publish message');
       }
 
-      logger.debug(`Published message to ${routingKey}:`, message);
+      logger.debug('Message published', {
+        routingKey,
+        correlationId: message.metadata.correlationId
+      });
+
     } catch (error) {
-      logger.error(`Error publishing message to ${routingKey}:`, error);
-      throw error;
+      logger.error('Error publishing message:', error);
+      throw new MessageQueueError('Failed to publish message');
     }
   }
 
-  async subscribe(routingKey, handler) {
+  async subscribe(queue, handler) {
     if (!this.connected) {
-      await this.connect();
+      throw new MessageQueueError('Message queue is not connected');
     }
 
     try {
-      // Bind queue to exchange with routing key
-      await this.channel.bindQueue(config.rabbitmq.queue, config.rabbitmq.exchange, routingKey);
-
-      // Start consuming messages
-      await this.channel.consume(config.rabbitmq.queue, async (msg) => {
-        if (msg === null) {
-          logger.warn('Consumer cancelled by server');
-          return;
-        }
+      const consumer = await this.channel.consume(queue, async (msg) => {
+        if (!msg) return;
 
         try {
-          const content = JSON.parse(msg.content.toString());
-          await handler(content);
+          const message = JSON.parse(msg.content.toString());
+          const retryCount = msg.properties.headers['x-retry-count'] || 0;
+
+          logger.debug('Message received', {
+            queue,
+            correlationId: message.metadata.correlationId
+          });
+
+          await handler(message.data, message.metadata);
           this.channel.ack(msg);
+
         } catch (error) {
           logger.error('Error processing message:', error);
-          // Reject the message and requeue if it's not a parsing error
-          this.channel.reject(msg, !error instanceof SyntaxError);
+
+          // Handle retries
+          const retryCount = (msg.properties.headers['x-retry-count'] || 0) + 1;
+          const maxRetries = 3;
+
+          if (retryCount <= maxRetries) {
+            this.channel.publish(
+              config.rabbitmq.exchange,
+              msg.fields.routingKey,
+              msg.content,
+              {
+                ...msg.properties,
+                headers: {
+                  ...msg.properties.headers,
+                  'x-retry-count': retryCount
+                }
+              }
+            );
+            this.channel.ack(msg);
+          } else {
+            // Send to dead letter queue
+            this.channel.reject(msg, false);
+          }
         }
       });
 
-      logger.info(`Subscribed to ${routingKey} messages`);
+      this.consumers.set(queue, consumer);
+      logger.info('Subscribed to queue', { queue });
+
     } catch (error) {
-      logger.error(`Error subscribing to ${routingKey}:`, error);
-      throw error;
+      logger.error('Error subscribing to queue:', error);
+      throw new MessageQueueError('Failed to subscribe to queue');
     }
   }
 
-  async close() {
+  async unsubscribe(queue) {
+    if (!this.connected) return;
+
     try {
+      const consumer = this.consumers.get(queue);
+      if (consumer) {
+        await this.channel.cancel(consumer.consumerTag);
+        this.consumers.delete(queue);
+        logger.info('Unsubscribed from queue', { queue });
+      }
+    } catch (error) {
+      logger.error('Error unsubscribing from queue:', error);
+    }
+  }
+
+  async shutdown() {
+    try {
+      // Unsubscribe from all queues
+      for (const [queue] of this.consumers) {
+        await this.unsubscribe(queue);
+      }
+
+      // Close channel and connection
       if (this.channel) {
         await this.channel.close();
       }
       if (this.connection) {
         await this.connection.close();
       }
+
+      clearTimeout(this.reconnectTimeout);
       this.connected = false;
-      logger.info('Closed RabbitMQ connection');
+      logger.info('Message queue shutdown complete');
     } catch (error) {
-      logger.error('Error closing RabbitMQ connection:', error);
-      throw error;
+      logger.error('Error during message queue shutdown:', error);
+      throw new MessageQueueError('Failed to shutdown message queue');
     }
   }
 }
 
-module.exports = { MessageQueue };
+// Create a singleton instance
+const messageQueue = new MessageQueue();
+
+module.exports = { messageQueue };

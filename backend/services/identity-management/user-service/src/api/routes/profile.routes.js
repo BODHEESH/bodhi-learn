@@ -1,12 +1,17 @@
 // \d\DREAM\bodhi-learn\backend\services\identity-management\user-service\src\api\routes\profile.routes.js
 
 const express = require('express');
-const router = express.Router();
 const multer = require('multer');
 const profileController = require('../controllers/profile.controller');
-const { authenticate, authorize } = require('../middleware/auth');
-const { validate, profileSchemas } = require('../middleware/validator');
+const { authenticate, authorize } = require('../middleware/auth.middleware');
+const { validateSchema } = require('../middleware/validation.middleware');
 const { apiLimiter } = require('../middleware/rate-limiter');
+const { 
+  updateProfileSchema, 
+  updatePreferencesSchema 
+} = require('../validators/profile.schema');
+
+const router = express.Router();
 
 // Configure multer for file uploads
 const upload = multer({
@@ -32,7 +37,7 @@ router.get('/:userId',
 // Update profile
 router.put('/:userId',
   authenticate,
-  validate(profileSchemas.update),
+  validateSchema(updateProfileSchema),
   profileController.update
 );
 
@@ -46,13 +51,14 @@ router.patch('/:userId/avatar',
 // Update preferences
 router.patch('/:userId/preferences',
   authenticate,
+  validateSchema(updatePreferencesSchema),
   profileController.updatePreferences
 );
 
 // Update metadata
 router.patch('/:userId/metadata',
   authenticate,
-  authorize('super_admin', 'tenant_admin'),
+  authorize(['super_admin', 'tenant_admin']),
   profileController.updateMetadata
 );
 
